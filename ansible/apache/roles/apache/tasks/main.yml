@@ -1,0 +1,35 @@
+---
+
+- name: ensure apache is installed
+  apt:
+      name: apache2
+      state: present
+- name: collect name of server from GCE API
+  uri:
+    url: http://metadata.google.internal/computeMetadata/v1/instance/name
+    headers:
+        Metadata-Flavor: "Google"
+    return_content: yes
+  register: instance_metadata_hostname
+- name: print name
+  debug:
+      msg: "{{ instance_metadata_hostname.content }}"
+- name: process template of page
+  template:
+      src: index.html.j2
+      dest: /var/www/html/index.html
+#  notify: apache2 restart
+- name: restart server
+  service:
+      name: apache2
+      state: restarted
+- name: get info on validation
+  uri:
+      url: http://localhost
+      return_content: yes
+  register: server_health_check
+- name: check
+  fail:
+      msg: "Either server not started or template not applied, so there is no name of server"
+  when: server_health_check.content.find(instance_metadata_hostname.content) == -1
+

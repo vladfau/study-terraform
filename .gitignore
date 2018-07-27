@@ -1,2 +1,4 @@
 private_tfvars.sh
 .terraform
+inventory/
+site.retry
