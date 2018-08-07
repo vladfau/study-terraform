@@ -1,0 +1,13 @@
+---
+- name: install and configure multi-node zookeeper
+  hosts: tag_zk
+  become: true
+  roles:
+      - role: zk
+        tags: zk
+- name: install and configure multi-node solr
+  hosts: tag_solr
+  become: true
+  roles:
+      - role: solr
+        tags: solr

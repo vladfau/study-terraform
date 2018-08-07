@@ -1,0 +1,94 @@
+---
+
+- name: get other zk host list from input
+  set_fact:
+    zk_hosts: "{{ lookup('env', 'ZK_HOSTS') }}"
+- debug:
+    msg: "{{ zk_hosts }}"
+- name: installing nc for debugging
+  yum:
+    name: nc
+    state: present
+
+- name: installing jdk
+  yum:
+    name: java-1.8.0-openjdk-devel
+    state: present
+
+- name: create directory /opt/zk
+  file:
+    path: /opt/zk
+    owner: root
+    group: root
+    mode: 01777
+    state: directory
+- name: create directory /opt/zk/data
+  file:
+    path: /opt/zk/data
+    owner: root
+    group: root
+    mode: 01777
+    state: directory
+
+- name: download zk
+  get_url:
+    url: http://www-us.apache.org/dist/zookeeper/zookeeper-{{ lookup('env', 'ZK_VERSION') }}/zookeeper-{{ lookup('env', 'ZK_VERSION') }}.tar.gz
+    dest: /tmp/zk.tar.gz
+- name: unpack zk
+  unarchive:
+    src: /tmp/zk.tar.gz
+    dest: /opt/zk
+    remote_src: true
+- name: remove original archive
+  file:
+    path: /tmp/zk.tar.gz
+    state: absent
+
+- name: generate config
+  template:
+    src: zoo.cfg.j2
+    dest: /opt/zk/zookeeper-{{ lookup('env', 'ZK_VERSION') }}/zoo.cfg
+- name: get id of instance
+  shell: hostname -i | head -n 1 | cut -d . -f3-4 | tr -d 0\.
+  register: instanceId
+- name: generate /opt/zk/data/myid
+  copy:
+    content: "{{ instanceId.stdout }}"
+    dest: /opt/zk/data/myid
+
+- name: get slf4j-api version
+  shell: ls slf4j-api*.jar
+  args:
+    chdir: /opt/zk/zookeeper-{{ lookup('env', 'ZK_VERSION') }}/lib
+  register: slf4
+- name: get log4j version
+  shell: ls log4j*.jar
+  args:
+    chdir: /opt/zk/zookeeper-{{ lookup('env', 'ZK_VERSION') }}/lib
+  register: log4j
+- name: get slf4j-log4j version
+  shell: ls slf4j-log4j12*.jar
+  args:
+    chdir: /opt/zk/zookeeper-{{ lookup('env', 'ZK_VERSION') }}/lib
+  register: slf4log4j
+- name: get java cmd full path
+  shell: which java
+  register: javapath
+
+- name: create zk systemd unit
+  template:
+    src: zk.service.j2
+    dest: /etc/systemd/system/zk.service
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+- name: run zk
+  systemd:
+    name: zk
+    state: started
+- name: sanity check
+  shell: echo ruok | nc localhost 2181
+  register: sanity
+  until: sanity.stdout == "imok"
+  retries: 5
+  delay: 10

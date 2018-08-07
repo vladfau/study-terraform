@@ -1,0 +1,9 @@
+[Unit]
+Description=execute zk in cluster mode
+[Service]
+ExecStart={{ javapath.stdout }} -cp zookeeper-{{lookup('env', 'ZK_VERSION')}}.jar:lib/{{ slf4.stdout }}:lib/{{ slf4log4j.stdout }}:lib/{{ log4j.stdout }}:conf  org.apache.zookeeper.server.quorum.QuorumPeerMain zoo.cfg
+SuccessExitStatus=143
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+WorkingDirectory=/opt/zk/zookeeper-{{lookup('env', 'ZK_VERSION')}}

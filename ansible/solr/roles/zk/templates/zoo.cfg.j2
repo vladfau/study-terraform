@@ -1,0 +1,15 @@
+tickTime=2000
+dataDir=/opt/zk/data
+clientPort=2181
+initLimit=5
+syncLimit=2
+{% for host in zk_hosts.split(',') %}
+    {% set ip = host.split('.') %}
+    {% if ip[2] == '0' %}
+        {% set firstDigit = '' %}
+    {% else %}
+        {% set firstDigit = ip[2] %}
+    {% endif %}
+    {% set secondDigit = ip[3] %}
+server.{{firstDigit}}{{secondDigit}}={{host}}:2888:3888
+{% endfor %}

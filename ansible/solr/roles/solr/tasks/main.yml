@@ -1,0 +1,43 @@
+---
+
+- name: get ZK IP
+  uri:
+    url: http://metadata.google.internal/computeMetadata/v1/instance/attributes/ZK_LB
+    headers:
+        Metadata-Flavor: "Google"
+    return_content: yes
+  register: solr_host
+- debug:
+    msg: "{{ solr_host.content }}"
+
+- name: installing jdk
+  yum:
+    name: java-1.8.0-openjdk-devel
+    state: present
+- name: installing lsof
+  yum:
+    name: lsof
+    state: present
+
+
+- name: create directory /opt/solr
+  file:
+    path: /opt/solr
+    owner: root
+    group: root
+    mode: 01777
+    state: directory
+
+- name: download solr
+  get_url:
+    url: http://www-eu.apache.org/dist/lucene/solr/{{ lookup('env', 'SOLR_VERSION') }}/solr-{{ lookup('env', 'SOLR_VERSION') }}.tgz
+    dest: /tmp/solr.tar.gz
+- name: unpack solr
+  unarchive:
+    src: /tmp/solr.tar.gz
+    dest: /opt/solr
+    remote_src: true
+- name: remove original archive
+  file:
+    path: /tmp/solr.tar.gz
+    state: absent
